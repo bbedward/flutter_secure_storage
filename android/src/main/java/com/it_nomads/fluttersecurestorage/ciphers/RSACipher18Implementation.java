@@ -112,7 +112,8 @@ class RSACipher18Implementation {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
-        Key privateKey = ks.getKey(KEY_ALIAS, null);
+        KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry)ks.getEntry(KEY_ALIAS, null);
+        Key privateKey = entry.getSecretKey();
         if (privateKey == null) {
             createKeys(context);
         }
@@ -150,6 +151,9 @@ class RSACipher18Implementation {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 builder.setIsStrongBoxBacked(true);
             }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                builder.setInvalidatedByBiometricEnrollment(false);
+            }
 
             spec = builder.build();
         }
@@ -161,7 +165,7 @@ class RSACipher18Implementation {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                 if (se instanceof StrongBoxUnavailableException) {
                     Log.i("fluttersecurestorage", "StrongBox is unavailable on this device");
-                    spec = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
+                    KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
                             .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
                             .setDigests(KeyProperties.DIGEST_SHA256)
                             .setBlockModes(KeyProperties.BLOCK_MODE_ECB)
@@ -170,7 +174,8 @@ class RSACipher18Implementation {
                             .setCertificateNotBefore(start.getTime())
                             .setCertificateNotAfter(end.getTime())
                             .setUserAuthenticationRequired(mgr.isDeviceSecure())
-                            .build();
+                            .setInvalidatedByBiometricEnrollment(false);
+                    spec = builder.build();
                     kpGenerator.initialize(spec);
                     kpGenerator.generateKeyPair();
                 }
