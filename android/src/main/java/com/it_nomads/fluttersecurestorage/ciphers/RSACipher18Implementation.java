@@ -1,5 +1,6 @@
 package com.it_nomads.fluttersecurestorage.ciphers;
 
+import android.annotation.SuppressLint;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.os.Build;
@@ -123,17 +124,20 @@ class RSACipher18Implementation {
         }
     }
 
+    @SuppressLint("NewApi")
+    @SuppressWarnings("deprecation")
     private void createKeys(Context context) throws Exception {
         Calendar start = Calendar.getInstance();
         Calendar end = Calendar.getInstance();
-        KeyguardManager mgr = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         end.add(Calendar.YEAR, 25);
+        KeyguardManager mgr = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
 
         KeyPairGenerator kpGenerator = KeyPairGenerator.getInstance(TYPE_RSA, KEYSTORE_PROVIDER_ANDROID);
 
         AlgorithmParameterSpec spec;
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+            //noinspection deprecation
             spec = new android.security.KeyPairGeneratorSpec.Builder(context)
                     .setAlias(KEY_ALIAS)
                     .setSubject(new X500Principal("CN=" + KEY_ALIAS))
@@ -164,27 +168,22 @@ class RSACipher18Implementation {
         try {
             kpGenerator.initialize(spec);
             kpGenerator.generateKeyPair();
-        } catch (Exception se) {
-            Log.e("fluttersecurestorage", "An error occurred when trying to generate a StrongBoxSecurityKey: " + se.getMessage());
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                if (se instanceof StrongBoxUnavailableException) {
-                    Log.i("fluttersecurestorage", "StrongBox is unavailable on this device");
-                    KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
-                            .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
-                            .setDigests(KeyProperties.DIGEST_SHA256)
-                            .setBlockModes(KeyProperties.BLOCK_MODE_ECB)
-                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
-                            .setCertificateSerialNumber(BigInteger.valueOf(1))
-                            .setCertificateNotBefore(start.getTime())
-                            .setCertificateNotAfter(end.getTime())
-                            .setUserAuthenticationRequired(mgr.isDeviceSecure())
-                            .setInvalidatedByBiometricEnrollment(false);
-                    spec = builder.build();
-                    kpGenerator.initialize(spec);
-                    kpGenerator.generateKeyPair();
-                }
+        } catch (StrongBoxUnavailableException se) {
+            KeyGenParameterSpec.Builder builder = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
+                    .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
+                    .setDigests(KeyProperties.DIGEST_SHA256)
+                    .setBlockModes(KeyProperties.BLOCK_MODE_ECB)
+                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
+                    .setCertificateSerialNumber(BigInteger.valueOf(1))
+                    .setCertificateNotBefore(start.getTime())
+                    .setCertificateNotAfter(end.getTime())
+                    .setUserAuthenticationRequired(mgr.isDeviceSecure());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                builder.setInvalidatedByBiometricEnrollment(false);
             }
+            spec = builder.build();
+            kpGenerator.initialize(spec);
+            kpGenerator.generateKeyPair();
         }
     }
-
 }
