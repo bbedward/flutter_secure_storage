@@ -112,9 +112,9 @@ class RSACipher18Implementation {
         KeyStore ks = KeyStore.getInstance(KEYSTORE_PROVIDER_ANDROID);
         ks.load(null);
 
-        KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry)ks.getEntry(KEY_ALIAS, null);
+        KeyStore.PrivateKeyEntry entry = (KeyStore.PrivateKeyEntry)ks.getEntry(KEY_ALIAS, null);
         if (entry != null) {
-            Key privateKey = entry.getSecretKey();
+            Key privateKey = entry.getPrivateKey();
             if (privateKey == null) {
                 createKeys(context);
             }
