@@ -113,8 +113,12 @@ class RSACipher18Implementation {
         ks.load(null);
 
         KeyStore.SecretKeyEntry entry = (KeyStore.SecretKeyEntry)ks.getEntry(KEY_ALIAS, null);
-        Key privateKey = entry.getSecretKey();
-        if (privateKey == null) {
+        if (entry != null) {
+            Key privateKey = entry.getSecretKey();
+            if (privateKey == null) {
+                createKeys(context);
+            }
+        } else {
             createKeys(context);
         }
     }
