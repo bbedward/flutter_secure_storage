@@ -1,17 +1,16 @@
 package com.it_nomads.fluttersecurestorage.ciphers;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
 import android.security.keystore.KeyProperties;
 import android.security.keystore.StrongBoxUnavailableException;
+import android.util.Log;
 
 import java.math.BigInteger;
 import java.security.Key;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
-import java.security.KeyStoreException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.cert.Certificate;
@@ -116,8 +115,6 @@ class RSACipher18Implementation {
         }
     }
 
-    @SuppressLint("NewApi")
-    @SuppressWarnings("deprecation")
     private void createKeys(Context context) throws Exception {
         Calendar start = Calendar.getInstance();
         Calendar end = Calendar.getInstance();
@@ -128,7 +125,6 @@ class RSACipher18Implementation {
         AlgorithmParameterSpec spec;
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
-            //noinspection deprecation
             spec = new android.security.KeyPairGeneratorSpec.Builder(context)
                     .setAlias(KEY_ALIAS)
                     .setSubject(new X500Principal("CN=" + KEY_ALIAS))
@@ -155,18 +151,24 @@ class RSACipher18Implementation {
         try {
             kpGenerator.initialize(spec);
             kpGenerator.generateKeyPair();
-        } catch (StrongBoxUnavailableException se) {
-            spec = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
-                    .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
-                    .setDigests(KeyProperties.DIGEST_SHA256)
-                    .setBlockModes(KeyProperties.BLOCK_MODE_ECB)
-                    .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
-                    .setCertificateSerialNumber(BigInteger.valueOf(1))
-                    .setCertificateNotBefore(start.getTime())
-                    .setCertificateNotAfter(end.getTime())
-                    .build();
-            kpGenerator.initialize(spec);
-            kpGenerator.generateKeyPair();
+        } catch (Exception se) {
+            Log.e("fluttersecurestorage", "An error occurred when trying to generate a StrongBoxSecurityKey: " + se.getMessage());
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                if (se instanceof StrongBoxUnavailableException) {
+                    Log.i("fluttersecurestorage", "StrongBox is unavailable on this device");
+                    spec = new KeyGenParameterSpec.Builder(KEY_ALIAS, KeyProperties.PURPOSE_DECRYPT | KeyProperties.PURPOSE_ENCRYPT)
+                            .setCertificateSubject(new X500Principal("CN=" + KEY_ALIAS))
+                            .setDigests(KeyProperties.DIGEST_SHA256)
+                            .setBlockModes(KeyProperties.BLOCK_MODE_ECB)
+                            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
+                            .setCertificateSerialNumber(BigInteger.valueOf(1))
+                            .setCertificateNotBefore(start.getTime())
+                            .setCertificateNotAfter(end.getTime())
+                            .build();
+                    kpGenerator.initialize(spec);
+                    kpGenerator.generateKeyPair();
+                }
+            }
         }
     }
 
