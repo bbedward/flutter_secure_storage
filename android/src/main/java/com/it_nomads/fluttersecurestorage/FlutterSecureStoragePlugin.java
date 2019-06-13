@@ -1,8 +1,10 @@
 package com.it_nomads.fluttersecurestorage;
 
 import android.annotation.SuppressLint;
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.util.Base64;
 import android.util.Log;
 
@@ -19,12 +21,15 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.Registrar;
 
+import static android.content.Context.KEYGUARD_SERVICE;
+
 @SuppressLint("ApplySharedPref")
 public class FlutterSecureStoragePlugin implements MethodCallHandler {
 
     private final SharedPreferences preferences;
     private final Charset charset;
     private final StorageCipher storageCipher;
+    private final KeyguardManager mgr;
     private static final String ELEMENT_PREFERENCES_KEY_PREFIX = "VGhpcyBpcyB0aGUgcHJlZml4IGZvciBhIHNlY3VyZSBzdG9yYWdlCg";
     private static final String SHARED_PREFERENCES_NAME = "FlutterSecureStorage";
 
@@ -41,6 +46,7 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler {
     private FlutterSecureStoragePlugin(Context context) throws Exception {
         preferences = context.getSharedPreferences(SHARED_PREFERENCES_NAME, Context.MODE_PRIVATE);
         charset = Charset.forName("UTF-8");
+        mgr = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
 
         StorageCipher18Implementation.moveSecretFromPreferencesIfNeeded(preferences, context);
         storageCipher = new StorageCipher18Implementation(context);
@@ -81,6 +87,14 @@ public class FlutterSecureStoragePlugin implements MethodCallHandler {
                 case "deleteAll": {
                     deleteAll();
                     result.success(null);
+                    break;
+                }
+                case "isDeviceSecure": {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        result.success(mgr.isDeviceSecure());
+                    } else {
+                        result.success(false);
+                    }
                     break;
                 }
                 default:

@@ -1,4 +1,5 @@
 #import "FlutterSecureStoragePlugin.h"
+@import LocalAuthentication;
 
 static NSString *const KEYCHAIN_SERVICE = @"flutter_secure_storage_service";
 static NSString *const CHANNEL_NAME = @"plugins.it_nomads.com/flutter_secure_storage";
@@ -71,18 +72,31 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
         NSDictionary *value = [self readAll: groupId];
 
         result(value);
-    }else {
+    } else if ([@"isDeviceSecure" isEqualToString:call.method]) {
+        LAContext *context = [[LAContext alloc] init];
+        if (@available(iOS 9.0, *)) {
+            result([NSNumber numberWithBool:[context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication error:nil]]);
+        } else {
+            result([NSNumber numberWithBool:false]);
+        }
+    } else {
         result(FlutterMethodNotImplemented);
     }
 }
 
 - (void)write:(NSString *)value forKey:(NSString *)key forGroup:(NSString *)groupId {
     NSMutableDictionary *search = [self.query mutableCopy];
+    CFErrorRef *err = nil;
+    SecAccessControlRef sacRef = SecAccessControlCreateWithFlags(kCFAllocatorDefault,
+                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                     kSecAccessControlUserPresence,
+                                     err);
     if(groupId != nil) {
         search[(__bridge id)kSecAttrAccessGroup] = groupId;
     }
     search[(__bridge id)kSecAttrAccount] = key;
     search[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
+    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
     
     OSStatus status;
     status = SecItemCopyMatching((__bridge CFDictionaryRef)search, NULL);
@@ -108,12 +122,18 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
 - (NSString *)read:(NSString *)key forGroup:(NSString *)groupId {
     NSMutableDictionary *search = [self.query mutableCopy];
+    CFErrorRef *err = nil;
+    SecAccessControlRef sacRef = SecAccessControlCreateWithFlags(kCFAllocatorDefault,
+                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                     kSecAccessControlUserPresence,
+                                     err);
     if(groupId != nil) {
      search[(__bridge id)kSecAttrAccessGroup] = groupId;
     }
     search[(__bridge id)kSecAttrAccount] = key;
     search[(__bridge id)kSecReturnData] = (__bridge id)kCFBooleanTrue;
-    
+    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
+
     CFDataRef resultData = NULL;
     
     OSStatus status;
@@ -148,6 +168,11 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
 - (NSDictionary *)readAll:(NSString *)groupId {
     NSMutableDictionary *search = [self.query mutableCopy];
+    CFErrorRef *err = nil;
+    SecAccessControlRef sacRef = SecAccessControlCreateWithFlags(kCFAllocatorDefault,
+                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
+                                     kSecAccessControlUserPresence,
+                                     err);
     if(groupId != nil) {
         search[(__bridge id)kSecAttrAccessGroup] = groupId;
     }
@@ -156,6 +181,7 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
     search[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitAll;
     search[(__bridge id)kSecReturnAttributes] = (__bridge id)kCFBooleanTrue;
+    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
 
     CFArrayRef resultData = NULL;
     

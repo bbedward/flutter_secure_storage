@@ -1,5 +1,6 @@
 package com.it_nomads.fluttersecurestorage.ciphers;
 
+import android.app.KeyguardManager;
 import android.content.Context;
 import android.os.Build;
 import android.security.keystore.KeyGenParameterSpec;
@@ -19,6 +20,8 @@ import java.util.Calendar;
 
 import javax.crypto.Cipher;
 import javax.security.auth.x500.X500Principal;
+
+import static android.content.Context.KEYGUARD_SERVICE;
 
 class RSACipher18Implementation {
 
@@ -118,6 +121,7 @@ class RSACipher18Implementation {
     private void createKeys(Context context) throws Exception {
         Calendar start = Calendar.getInstance();
         Calendar end = Calendar.getInstance();
+        KeyguardManager mgr = (KeyguardManager) context.getSystemService(KEYGUARD_SERVICE);
         end.add(Calendar.YEAR, 25);
 
         KeyPairGenerator kpGenerator = KeyPairGenerator.getInstance(TYPE_RSA, KEYSTORE_PROVIDER_ANDROID);
@@ -140,6 +144,7 @@ class RSACipher18Implementation {
                     .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_RSA_PKCS1)
                     .setCertificateSerialNumber(BigInteger.valueOf(1))
                     .setCertificateNotBefore(start.getTime())
+                    .setUserAuthenticationRequired(mgr.isDeviceSecure())
                     .setCertificateNotAfter(end.getTime());
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -164,6 +169,7 @@ class RSACipher18Implementation {
                             .setCertificateSerialNumber(BigInteger.valueOf(1))
                             .setCertificateNotBefore(start.getTime())
                             .setCertificateNotAfter(end.getTime())
+                            .setUserAuthenticationRequired(mgr.isDeviceSecure())
                             .build();
                     kpGenerator.initialize(spec);
                     kpGenerator.generateKeyPair();

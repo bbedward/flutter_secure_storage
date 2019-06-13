@@ -61,6 +61,9 @@ class FlutterSecureStorage {
   Map<String, String> _selectOptions(iOSOptions iOptions, AndroidOptions aOptions) {
     return Platform.isIOS ? iOptions?.params : aOptions?.params;
   }
+
+  /// Returns whether or not the device lockscreen is secured by a PIN, passcode, or biometrics
+  Future<bool> isDeviceSecure() => _channel.invokeMethod('isDeviceSecure');
 }
 
 abstract class Options {
