@@ -86,18 +86,11 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
 - (void)write:(NSString *)value forKey:(NSString *)key forGroup:(NSString *)groupId {
     NSMutableDictionary *search = [self.query mutableCopy];
-    CFErrorRef *err = nil;
-    SecAccessControlRef sacRef = SecAccessControlCreateWithFlags(kCFAllocatorDefault,
-                                     kSecAttrAccessibleWhenPasscodeSetThisDeviceOnly,
-                                     kSecAccessControlUserPresence,
-                                     err);
     if(groupId != nil) {
         search[(__bridge id)kSecAttrAccessGroup] = groupId;
     }
     search[(__bridge id)kSecAttrAccount] = key;
     search[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitOne;
-    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
-    
     OSStatus status;
     status = SecItemCopyMatching((__bridge CFDictionaryRef)search, NULL);
     if (status == noErr){
@@ -132,8 +125,13 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
     }
     search[(__bridge id)kSecAttrAccount] = key;
     search[(__bridge id)kSecReturnData] = (__bridge id)kCFBooleanTrue;
-    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
-
+    LAContext *context = [[LAContext alloc] init];
+    if (@available(iOS 9.0, *)) {
+        if (@available(iOS 9.0, *) && [context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication error:nil]) {
+            search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
+        }
+    }
+    
     CFDataRef resultData = NULL;
     
     OSStatus status;
@@ -181,7 +179,12 @@ static NSString *const InvalidParameters = @"Invalid parameter's type";
 
     search[(__bridge id)kSecMatchLimit] = (__bridge id)kSecMatchLimitAll;
     search[(__bridge id)kSecReturnAttributes] = (__bridge id)kCFBooleanTrue;
-    search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
+    LAContext *context = [[LAContext alloc] init];
+    if (@available(iOS 9.0, *)) {
+        if ([context canEvaluatePolicy:LAPolicyDeviceOwnerAuthentication error:nil]) {
+            search[(__bridge id)kSecAttrAccessControl] = (__bridge_transfer id)sacRef;
+        }
+    }
 
     CFArrayRef resultData = NULL;
     
